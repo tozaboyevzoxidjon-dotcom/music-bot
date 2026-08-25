@@ -1,14 +1,29 @@
 import os
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from google import genai
 import yt_dlp
 
-TELEGRAM_BOT_TOKEN = "8766446426:AAEajDOdYmmDDnV5t_kY07Ljog4SoeKSm0M"
-GEMINI_API_KEY = "AQ.Ab8RN6Jq7yDxeG-wk99AT4rHnkaQUHmK7wD3E1-q3pkdac8lxQ"
+# Render muhit o'zgaruvchilaridan tokenlarni o'qish
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 user_modes = {}
+
+# Render port talabini qondirish uchun kichik veb-server
+class SimpleHTTPHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running successfully!")
+
+def run_web_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), SimpleHTTPHandler)
+    server.serve_forever()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -73,8 +88,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"Xatolik: {e}")
 
 if __name__ == '__main__':
+    # Veb-serverni alohida oqimda ishga tushiramiz
+    server_thread = threading.Thread(target=run_web_server, daemon=True)
+    server_thread.start()
+
+    # Telegram botni ishga tushiramiz
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.run_polling()
-  
+    
