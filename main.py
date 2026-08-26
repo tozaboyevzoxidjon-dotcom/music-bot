@@ -9,7 +9,8 @@ import yt_dlp
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-client = genai.Client(api_key=GEMINI_API_KEY)
+# Gemini mijozini xavfsiz sozlash
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 user_modes = {}
 
 class SimpleHTTPHandler(BaseHTTPRequestHandler):
@@ -68,15 +69,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if current_mode == "music":
         msg = await update.message.reply_text("🎵 Qo'shiq qidirilmoqda va yuklanmoqda...")
         
+        # YouTube bot himoyasini aylanib o'tish uchun 'ios' va 'mweb' mijozlari sozlandi
         ydl_opts = {
             'format': 'bestaudio/best', 
             'outtmpl': 'song.%(ext)s', 
             'default_search': 'ytsearch1', 
             'noplaylist': True, 
             'quiet': True,
-            'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['ios', 'mweb']
+                }
             }
         }
         
@@ -92,17 +95,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             await msg.delete()
         except Exception as e:
-            await msg.edit_text(f"Xatolik yuz berdi: {e}")
+            await msg.edit_text(f"Musiqa topishda xatolik yuz berdi. Boshqa nom bilan qidirib ko'ring!")
         finally:
             if filename and os.path.exists(filename):
                 os.remove(filename)
 
     elif current_mode == "ai":
+        if not client:
+            await update.message.reply_text("Gemini API kaliti sozlanmagan!")
+            return
         try:
-            response = client.models.generate_content(model="gemini-2.0-flash", contents=user_text)
+            # Barqaror ishlashi uchun gemini-1.5-flash modeli ishlatildi
+            response = client.models.generate_content(model="gemini-1.5-flash", contents=user_text)
             await update.message.reply_text(response.text)
         except Exception as e:
-            await update.message.reply_text(f"Xatolik yuz berdi: {e}")
+            await update.message.reply_text(f"AI bilan bog'lanishda xatolik yuz berdi. Qaytadan urinib ko'ring.")
 
 if __name__ == '__main__':
     server_thread = threading.Thread(target=run_web_server, daemon=True)
