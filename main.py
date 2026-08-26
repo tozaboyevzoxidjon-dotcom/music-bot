@@ -65,7 +65,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if current_mode == "music":
         msg = await update.message.reply_text("🎵 Qo'shiq qidirilmoqda va yuklanmoqda...")
-        ydl_opts = {'format': 'bestaudio/best', 'outtmpl': 'song.%(ext)s', 'default_search': 'ytsearch1', 'noplaylist': True, 'quiet': True}
+        
+        # YouTube cheklovlarini chetlab o'tish uchun sozlamalar qo'shildi
+        ydl_opts = {
+            'format': 'bestaudio/best', 
+            'outtmpl': 'song.%(ext)s', 
+            'default_search': 'ytsearch1', 
+            'noplaylist': True, 
+            'quiet': True,
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            }
+        }
+        
+        filename = None
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(user_text, download=True)
@@ -76,25 +89,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_audio(audio=audio_file, title=title)
             
             await msg.delete()
-            if os.path.exists(filename): os.remove(filename)
         except Exception as e:
             await msg.edit_text(f"Xatolik: {e}")
+        finally:
+            if filename and os.path.exists(filename):
+                os.remove(filename)
 
     elif current_mode == "ai":
         try:
-            response = client.models.generate_content(model="gemini-2.5-flash", contents=user_text)
+            # Model nomi gemini-1.5-flash ga o'zgartirildi (barqaror ishlashi uchun)
+            response = client.models.generate_content(model="gemini-1.5-flash", contents=user_text)
             await update.message.reply_text(response.text)
         except Exception as e:
             await update.message.reply_text(f"Xatolik: {e}")
 
 if __name__ == '__main__':
-    # Veb-serverni alohida oqimda ishga tushiramiz
     server_thread = threading.Thread(target=run_web_server, daemon=True)
     server_thread.start()
 
-    # Telegram botni ishga tushiramiz
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.run_polling()
-    
+        
