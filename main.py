@@ -44,7 +44,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await start(update, context)
         return
     elif user_text == "💡 Bot haqida":
-        await update.message.reply_text("Ushbu bot Gemini AI va YouTube Music bazasida ishlaydi.")
+        await update.message.reply_text("Ushbu bot Zoxid tomonidan yaratilgan AI va YouTube Music bazasida ishlaydi.")
         return
     elif user_text == "❓ Yordam":
         await update.message.reply_text("Musiqa yuklash uchun '🎵 Musiqa topuvchi' tugmasini bosing va qo'shiq nomini yozing.")
@@ -65,8 +65,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if current_mode == "music":
         msg = await update.message.reply_text("🎵 Qo'shiq qidirilmoqda va yuklanmoqda...")
-        
-        # YouTube cheklovlarini chetlab o'tish uchun sozlamalar qo'shildi
         ydl_opts = {
             'format': 'bestaudio/best', 
             'outtmpl': 'song.%(ext)s', 
@@ -97,8 +95,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif current_mode == "ai":
         try:
-            # Model nomi gemini-1.5-flash ga o'zgartirildi (barqaror ishlashi uchun)
-            response = client.models.generate_content(model="gemini-1.5-flash", contents=user_text)
+            # Model nomi gemini-2.0-flash ga to'g'irlandi
+            response = client.models.generate_content(model="gemini-2.0-flash", contents=user_text)
             await update.message.reply_text(response.text)
         except Exception as e:
             await update.message.reply_text(f"Xatolik: {e}")
@@ -111,4 +109,4 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.run_polling()
-        
+    
